@@ -30,21 +30,14 @@ workflows:
       - name: Flutter pub get
         script: flutter pub get
 
-      - name: Flutter build iOS (imzasiz)
+      - name: Flutter build iOS Simulator
         script: |
-          flutter build ios \
-            --release \
-            --no-codesign \
-            --dart-define=FLUTTER_BUILD_MODE=release
+          flutter build ios --simulator
 
-      - name: IPA olustur
+      - name: Simulator artifact olustur
         script: |
-          APP=$(find build/ios -name "*.app" | grep -v Simulator | head -1)
-          mkdir -p Payload
-          cp -r "$APP" Payload/
-          zip -r crossroads-unsigned.ipa Payload/
-          rm -rf Payload
+          APP=$(find build/ios/iphonesimulator -name "*.app" | head -1)
+          zip -r crossroads-simulator.zip "$APP"
 
     artifacts:
-      - crossroads-unsigned.ipa
-      - /tmp/xcodebuild_logs/*.log
+      - crossroads-simulator.zip
