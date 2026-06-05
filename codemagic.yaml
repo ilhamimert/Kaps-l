@@ -28,12 +28,21 @@ workflows:
       - name: Flutter pub get + analyze
         script: |
           flutter pub get
-          flutter analyze 2>&1 | tail -30
+          flutter analyze 2>&1 || true
+
+      - name: Dart derleyici kontrolu
+        script: |
+          dart analyze lib/ 2>&1
+          echo "Dart analyze exit: $?"
 
       - name: Flutter build iOS (imzasiz)
         script: |
-          flutter build ios --debug --no-codesign 2>&1 | tee /tmp/flutter_build.log
-          echo "Exit: $?"
+          flutter build ios --debug --no-codesign --verbose 2>&1 | tee /tmp/flutter_build.log
+          BUILD_EXIT=${PIPESTATUS[0]}
+          echo "=== Son 60 satir ==="
+          tail -60 /tmp/flutter_build.log
+          echo "=== Flutter build exit kodu: $BUILD_EXIT ==="
+          exit $BUILD_EXIT
 
       - name: IPA olustur (Sideloadly icin)
         script: |
