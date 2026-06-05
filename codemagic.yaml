@@ -18,10 +18,8 @@ workflows:
             --org io.crossroads \
             --platforms ios \
             --no-overwrite
-          # CocoaPods kalintisini temizle
           rm -f ios/Podfile ios/Podfile.lock
           rm -rf ios/Pods
-          # Xcode imzalama gereksinimini kaldır
           sed -i '' \
             -e 's/DEVELOPMENT_TEAM = [^;]*;/DEVELOPMENT_TEAM = "";/g' \
             -e 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' \
@@ -30,17 +28,43 @@ workflows:
       - name: Flutter pub get
         script: flutter pub get
 
-      - name: Flutter build iOS (imzasiz)
+      - name: Xcode build (imzasiz)
         script: |
-          # Flutter exit 1 donse bile Xcode .app'i uretmis olabilir
-          flutter build ios --no-codesign --release || true
+          cd ios
+          xcodebuild \
+            -workspace Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -sdk iphoneos \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_ENTITLEMENTS="" \
+            DEVELOPMENT_TEAM="" \
+            PROVISIONING_PROFILE="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            EXPANDED_CODE_SIGN_IDENTITY="" \
+            SYMROOT=$(pwd)/../build/ios \
+            2>&1 | tee /tmp/xcodebuild_full.log
+          echo "=== Son 30 satir ==="
+          tail -30 /tmp/xcodebuild_full.log
 
       - name: IPA olustur (Sideloadly icin)
         script: |
-          APP=$(find build/ios -name "Runner.app" | grep -v iphonesimulator | head -1)
-          if [ -z "$APP" ]; then
-            echo "HATA: Runner.app bulunamadi"
-            find build/ios -type d -name "*.app" || true
+          APP=$(find build/ios -name "Runner.app" \
+            -not -path "*/Intermediates/*" \
+            -not -path "*/iphonesimulator/*" | head -1)
+          if [ -z "$APP" ] || [ ! -f "$APP/Info.plist" ]; then
+            echo "build/ios'ta bulunamadi, DerivedData aranıyor..."
+            APP=$(find ~/Library/Developer/Xcode/DerivedData \
+              -name "Runner.app" \
+              -not -path "*/Intermediates/*" \
+              -not -path "*/Debug*" \
+              -not -path "*/iphonesimulator/*" 2>/dev/null | head -1)
+          fi
+          if [ -z "$APP" ] || [ ! -f "$APP/Info.plist" ]; then
+            echo "HATA: Gecerli Runner.app bulunamadi"
+            find build/ios -type d -name "*.app" 2>/dev/null || true
             exit 1
           fi
           echo "Bulunan: $APP"
@@ -52,3 +76,4 @@ workflows:
 
     artifacts:
       - crossroads-unsigned.ipa
+      - /tmp/xcodebuild_full.log
