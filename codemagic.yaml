@@ -7,10 +7,15 @@ workflows:
 
     environment:
       flutter: stable
-      xcode: latest
+      xcode: 16  # latest yerine 16.x - kernel_snapshot uyumsuzlugunu önler
       cocoapods: default
 
     scripts:
+      - name: Ortam bilgisi
+        script: |
+          flutter --version
+          xcodebuild -version
+
       - name: Flutter create (Xcode project olustur)
         script: |
           flutter create . \
@@ -20,7 +25,6 @@ workflows:
             --no-overwrite
           rm -f ios/Podfile ios/Podfile.lock
           rm -rf ios/Pods
-          # DEVELOPMENT_TEAM temizle, code signing tamamen kapat
           sed -i '' \
             -e 's/DEVELOPMENT_TEAM = [^;]*;/DEVELOPMENT_TEAM = "";/g' \
             -e 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' \
@@ -30,12 +34,13 @@ workflows:
         script: |
           flutter pub get
 
-      - name: xcodebuild (imzasiz - direkt)
+      - name: xcodebuild Release (imzasiz)
         script: |
+          # Release modu: AOT (gen_snapshot) kullanir, kernel_snapshot yok
           xcodebuild \
             -workspace ios/Runner.xcworkspace \
             -scheme Runner \
-            -configuration Debug \
+            -configuration Release \
             -sdk iphoneos \
             ONLY_ACTIVE_ARCH=NO \
             CODE_SIGNING_ALLOWED=NO \
@@ -49,8 +54,9 @@ workflows:
           BUILD_EXIT=${PIPESTATUS[0]}
           echo "=== xcodebuild exit: $BUILD_EXIT ==="
           if [ $BUILD_EXIT -ne 0 ]; then
-            echo "=== HATALAR ==="
-            grep "error:" flutter_build.log | grep -v "^note:" | head -30 || true
+            echo "=== HATA SATIRLARI ==="
+            grep -E "error:|Error:|Exception|FAILED|gen_snapshot|kernel_snapshot" \
+              flutter_build.log | grep -v "^note:" | head -40 || true
             echo "=== SON 60 SATIR ==="
             tail -60 flutter_build.log
           fi
@@ -75,14 +81,13 @@ workflows:
           echo "Secilen: $APP"
 
           if [ ! -f "$APP/Info.plist" ]; then
-            echo "HATA: Info.plist yok - Xcode build tamamlanmamis"
+            echo "HATA: Info.plist yok - build tamamlanmamis"
             ls -la "$APP/"
             exit 1
           fi
 
           APP_SIZE=$(du -sm "$APP" | cut -f1)
           echo "Boyut: ${APP_SIZE} MB"
-          echo "Icerik:"
           ls "$APP/"
 
           mkdir -p Payload
