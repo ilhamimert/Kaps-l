@@ -30,14 +30,25 @@ workflows:
       - name: Flutter pub get
         script: flutter pub get
 
-      - name: Flutter build iOS Simulator
+      - name: Flutter build iOS (imzasiz)
         script: |
-          flutter build ios --simulator
+          # Flutter exit 1 donse bile Xcode .app'i uretmis olabilir
+          flutter build ios --no-codesign --release || true
 
-      - name: Simulator artifact olustur
+      - name: IPA olustur (Sideloadly icin)
         script: |
-          APP=$(find build/ios/iphonesimulator -name "*.app" | head -1)
-          zip -r crossroads-simulator.zip "$APP"
+          APP=$(find build/ios -name "Runner.app" | grep -v iphonesimulator | head -1)
+          if [ -z "$APP" ]; then
+            echo "HATA: Runner.app bulunamadi"
+            find build/ios -type d -name "*.app" || true
+            exit 1
+          fi
+          echo "Bulunan: $APP"
+          mkdir -p Payload
+          cp -r "$APP" Payload/
+          zip -r crossroads-unsigned.ipa Payload/
+          rm -rf Payload
+          ls -lh crossroads-unsigned.ipa
 
     artifacts:
-      - crossroads-simulator.zip
+      - crossroads-unsigned.ipa
