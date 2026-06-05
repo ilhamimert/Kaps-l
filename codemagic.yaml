@@ -28,13 +28,13 @@ workflows:
       - name: Flutter pub get
         script: flutter pub get
 
-      - name: Xcode build (imzasiz)
+      - name: Xcode build (debug - imzasiz)
         script: |
           set -o pipefail
           xcodebuild \
             -workspace ios/Runner.xcworkspace \
             -scheme Runner \
-            -configuration Release \
+            -configuration Debug \
             -sdk iphoneos \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
@@ -44,16 +44,17 @@ workflows:
             PROVISIONING_PROFILE="" \
             PROVISIONING_PROFILE_SPECIFIER="" \
             EXPANDED_CODE_SIGN_IDENTITY="" \
+            FLUTTER_BUILD_MODE=debug \
             SYMROOT=$(pwd)/build/ios \
             2>&1 | tee /tmp/xcodebuild_full.log
 
       - name: IPA olustur (Sideloadly icin)
         script: |
-          APP=$(find build/ios/Release-iphoneos -maxdepth 1 -name "Runner.app" -type d 2>/dev/null | head -1)
+          APP=$(find build/ios/Debug-iphoneos -maxdepth 1 -name "Runner.app" -type d 2>/dev/null | head -1)
           if [ -z "$APP" ] || [ ! -f "$APP/Info.plist" ]; then
-            echo "HATA: build/ios/Release-iphoneos/Runner.app/Info.plist bulunamadi"
-            echo "Mevcut dosyalar:"
-            find build/ios -maxdepth 3 -type d 2>/dev/null || true
+            echo "HATA: Runner.app bulunamadi"
+            echo "Mevcut klasorler:"
+            find build/ios -maxdepth 2 -type d 2>/dev/null || true
             exit 1
           fi
           echo "Bulunan: $APP"
