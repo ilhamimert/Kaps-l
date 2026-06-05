@@ -18,6 +18,9 @@ workflows:
             --org io.crossroads \
             --platforms ios \
             --no-overwrite
+          # CocoaPods kalintisini temizle, Flutter SPM kullansin
+          rm -f ios/Podfile ios/Podfile.lock
+          rm -rf ios/Pods
 
       - name: Flutter pub get
         script: flutter pub get
