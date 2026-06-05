@@ -7,7 +7,7 @@ workflows:
 
     environment:
       flutter: stable
-      xcode: 16  # latest yerine 16.x - kernel_snapshot uyumsuzlugunu önler
+      xcode: 16
       cocoapods: default
 
     scripts:
@@ -15,8 +15,9 @@ workflows:
         script: |
           flutter --version
           xcodebuild -version
+          dart --version
 
-      - name: Flutter create (Xcode project olustur)
+      - name: Flutter create + pub get
         script: |
           flutter create . \
             --project-name crossroads \
@@ -29,14 +30,28 @@ workflows:
             -e 's/DEVELOPMENT_TEAM = [^;]*;/DEVELOPMENT_TEAM = "";/g' \
             -e 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' \
             ios/Runner.xcodeproj/project.pbxproj
-
-      - name: Flutter pub get
-        script: |
           flutter pub get
+          echo "=== Cozulen paket versiyonlari ==="
+          flutter pub deps --no-dev 2>&1 | head -50
+
+      - name: flutter assemble (Dart kernel derleme testi)
+        script: |
+          # xcodebuild'in calistirdigi ayni adim - ama dogrudan calisiyor
+          # Hata varsa burada acikca goruruz
+          mkdir -p /tmp/flutter-assemble-out
+          flutter assemble \
+            --output=/tmp/flutter-assemble-out \
+            -dTargetPlatform=ios \
+            -dBuildMode=debug \
+            -dTargetFile=lib/main.dart \
+            -dIosArchs=arm64 \
+            -dDartObfuscation=false \
+            debug_ios_bundle_flutter_assets \
+            2>&1
+          echo "=== flutter assemble exit: $? ==="
 
       - name: xcodebuild Release (imzasiz)
         script: |
-          # Release modu: AOT (gen_snapshot) kullanir, kernel_snapshot yok
           xcodebuild \
             -workspace ios/Runner.xcworkspace \
             -scheme Runner \
@@ -54,49 +69,33 @@ workflows:
           BUILD_EXIT=${PIPESTATUS[0]}
           echo "=== xcodebuild exit: $BUILD_EXIT ==="
           if [ $BUILD_EXIT -ne 0 ]; then
-            echo "=== HATA SATIRLARI ==="
-            grep -E "error:|Error:|Exception|FAILED|gen_snapshot|kernel_snapshot" \
+            echo "=== HATALAR ==="
+            grep -E "error:|Error:|Exception|kernel_snapshot|gen_snapshot" \
               flutter_build.log | grep -v "^note:" | head -40 || true
-            echo "=== SON 60 SATIR ==="
-            tail -60 flutter_build.log
+            echo "=== SON 40 SATIR ==="
+            tail -40 flutter_build.log
           fi
           exit $BUILD_EXIT
 
       - name: IPA olustur (Sideloadly icin)
         script: |
-          echo "=== Runner.app ara ==="
-          find . -name "Runner.app" -type d 2>/dev/null \
-            | grep -v Intermediates | grep -v iphonesimulator
-
           APP=$(find . -name "Runner.app" -type d 2>/dev/null \
             | grep -v Intermediates \
             | grep -v iphonesimulator \
             | head -1)
 
-          if [ -z "$APP" ]; then
-            echo "HATA: Runner.app bulunamadi!"
+          if [ -z "$APP" ] || [ ! -f "$APP/Info.plist" ]; then
+            echo "HATA: Gecerli Runner.app bulunamadi"
+            find . -name "Runner.app" -type d 2>/dev/null
             exit 1
           fi
 
-          echo "Secilen: $APP"
-
-          if [ ! -f "$APP/Info.plist" ]; then
-            echo "HATA: Info.plist yok - build tamamlanmamis"
-            ls -la "$APP/"
-            exit 1
-          fi
-
-          APP_SIZE=$(du -sm "$APP" | cut -f1)
-          echo "Boyut: ${APP_SIZE} MB"
-          ls "$APP/"
-
+          echo "App: $APP ($(du -sh "$APP" | cut -f1))"
           mkdir -p Payload
           cp -r "$APP" Payload/
           zip -r crossroads-unsigned.ipa Payload/
           rm -rf Payload
-
-          IPA_SIZE=$(du -sh crossroads-unsigned.ipa | cut -f1)
-          echo "BASARILI: crossroads-unsigned.ipa ($IPA_SIZE)"
+          echo "BASARILI: $(du -sh crossroads-unsigned.ipa | cut -f1)"
 
     artifacts:
       - crossroads-unsigned.ipa
