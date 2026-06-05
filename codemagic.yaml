@@ -28,25 +28,12 @@ workflows:
       - name: Flutter pub get
         script: flutter pub get
 
-      - name: Xcode build (debug - imzasiz)
+      - name: Flutter build verbose (hata tespiti)
         script: |
-          set -o pipefail
-          xcodebuild \
-            -workspace ios/Runner.xcworkspace \
-            -scheme Runner \
-            -configuration Debug \
-            -sdk iphoneos \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGN_ENTITLEMENTS="" \
-            DEVELOPMENT_TEAM="" \
-            PROVISIONING_PROFILE="" \
-            PROVISIONING_PROFILE_SPECIFIER="" \
-            EXPANDED_CODE_SIGN_IDENTITY="" \
-            FLUTTER_BUILD_MODE=debug \
-            SYMROOT=$(pwd)/build/ios \
-            2>&1 | tee /tmp/xcodebuild_full.log
+          flutter build ios --debug --no-codesign --verbose \
+            2>&1 | tee /tmp/flutter_verbose.log || true
+          echo "=== kernel_snapshot / error satirlari ==="
+          grep -i "error\|exception\|failed\|kernel_snapshot" /tmp/flutter_verbose.log | head -60
 
       - name: IPA olustur (Sideloadly icin)
         script: |
@@ -66,4 +53,4 @@ workflows:
 
     artifacts:
       - crossroads-unsigned.ipa
-      - /tmp/xcodebuild_full.log
+      - /tmp/flutter_verbose.log
