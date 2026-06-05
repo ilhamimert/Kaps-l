@@ -11,11 +11,6 @@ workflows:
       cocoapods: default
 
     scripts:
-      - name: Ortam bilgisi
-        script: |
-          flutter --version
-          xcodebuild -version
-
       - name: Flutter create + pub get
         script: |
           flutter create . \
@@ -31,22 +26,7 @@ workflows:
             ios/Runner.xcodeproj/project.pbxproj
           flutter pub get
 
-      - name: flutter assemble - Debug Dart derleme (tam cikti)
-        script: |
-          echo "=== DEBUG flutter assemble ==="
-          flutter assemble \
-            --output=/tmp/flutter-out \
-            -dTargetPlatform=ios \
-            -dBuildMode=debug \
-            -dTargetFile=lib/main.dart \
-            -dIosArchs=arm64 \
-            debug_ios_bundle_flutter_assets \
-            2>&1
-          ASSEMBLE_EXIT=$?
-          echo "=== flutter assemble exit: $ASSEMBLE_EXIT ==="
-          exit $ASSEMBLE_EXIT
-
-      - name: xcodebuild Debug (imzasiz)
+      - name: xcodebuild (imzasiz)
         script: |
           xcodebuild \
             -workspace ios/Runner.xcworkspace \
@@ -65,11 +45,8 @@ workflows:
           BUILD_EXIT=${PIPESTATUS[0]}
           echo "=== xcodebuild exit: $BUILD_EXIT ==="
           if [ $BUILD_EXIT -ne 0 ]; then
-            echo "=== LOG ILK 150 SATIR ==="
+            echo "=== ILK 150 SATIR ==="
             head -150 flutter_build.log
-            echo "..."
-            echo "=== LOG SON 30 SATIR ==="
-            tail -30 flutter_build.log
           fi
           exit $BUILD_EXIT
 
@@ -82,6 +59,7 @@ workflows:
 
           if [ -z "$APP" ] || [ ! -f "$APP/Info.plist" ]; then
             echo "HATA: Gecerli Runner.app bulunamadi"
+            find . -name "Runner.app" -type d 2>/dev/null
             exit 1
           fi
 
