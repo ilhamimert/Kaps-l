@@ -15,7 +15,6 @@ workflows:
         script: |
           flutter --version
           xcodebuild -version
-          dart --version
 
       - name: Flutter create + pub get
         script: |
@@ -31,31 +30,28 @@ workflows:
             -e 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' \
             ios/Runner.xcodeproj/project.pbxproj
           flutter pub get
-          echo "=== Cozulen paket versiyonlari ==="
-          flutter pub deps --no-dev 2>&1 | head -50
 
-      - name: flutter assemble (Dart kernel derleme testi)
+      - name: flutter assemble - Debug Dart derleme (tam cikti)
         script: |
-          # xcodebuild'in calistirdigi ayni adim - ama dogrudan calisiyor
-          # Hata varsa burada acikca goruruz
-          mkdir -p /tmp/flutter-assemble-out
+          echo "=== DEBUG flutter assemble ==="
           flutter assemble \
-            --output=/tmp/flutter-assemble-out \
+            --output=/tmp/flutter-out \
             -dTargetPlatform=ios \
             -dBuildMode=debug \
             -dTargetFile=lib/main.dart \
             -dIosArchs=arm64 \
-            -dDartObfuscation=false \
             debug_ios_bundle_flutter_assets \
             2>&1
-          echo "=== flutter assemble exit: $? ==="
+          ASSEMBLE_EXIT=$?
+          echo "=== flutter assemble exit: $ASSEMBLE_EXIT ==="
+          exit $ASSEMBLE_EXIT
 
-      - name: xcodebuild Release (imzasiz)
+      - name: xcodebuild Debug (imzasiz)
         script: |
           xcodebuild \
             -workspace ios/Runner.xcworkspace \
             -scheme Runner \
-            -configuration Release \
+            -configuration Debug \
             -sdk iphoneos \
             ONLY_ACTIVE_ARCH=NO \
             CODE_SIGNING_ALLOWED=NO \
@@ -69,11 +65,11 @@ workflows:
           BUILD_EXIT=${PIPESTATUS[0]}
           echo "=== xcodebuild exit: $BUILD_EXIT ==="
           if [ $BUILD_EXIT -ne 0 ]; then
-            echo "=== HATALAR ==="
-            grep -E "error:|Error:|Exception|kernel_snapshot|gen_snapshot" \
-              flutter_build.log | grep -v "^note:" | head -40 || true
-            echo "=== SON 40 SATIR ==="
-            tail -40 flutter_build.log
+            echo "=== LOG ILK 150 SATIR ==="
+            head -150 flutter_build.log
+            echo "..."
+            echo "=== LOG SON 30 SATIR ==="
+            tail -30 flutter_build.log
           fi
           exit $BUILD_EXIT
 
@@ -86,7 +82,6 @@ workflows:
 
           if [ -z "$APP" ] || [ ! -f "$APP/Info.plist" ]; then
             echo "HATA: Gecerli Runner.app bulunamadi"
-            find . -name "Runner.app" -type d 2>/dev/null
             exit 1
           fi
 
