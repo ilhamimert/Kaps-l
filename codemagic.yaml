@@ -20,6 +20,7 @@ workflows:
             --no-overwrite
           rm -f ios/Podfile ios/Podfile.lock
           rm -rf ios/Pods
+          # DEVELOPMENT_TEAM temizle, code signing tamamen kapat
           sed -i '' \
             -e 's/DEVELOPMENT_TEAM = [^;]*;/DEVELOPMENT_TEAM = "";/g' \
             -e 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' \
@@ -29,21 +30,38 @@ workflows:
         script: |
           flutter pub get
 
-      - name: Flutter build iOS (imzasiz)
+      - name: xcodebuild (imzasiz - direkt)
         script: |
-          # Flutter build basarili olsa da olmasa da devam et.
-          # "Failed to build iOS app: Development Team" hatasi deploy check'inden geliyor,
-          # ama Xcode build tamamlanmis oluyor.
-          flutter build ios --debug --no-codesign 2>&1 | tee flutter_build.log || true
-          echo "=== Build ciktisi ==="
-          tail -20 flutter_build.log
+          xcodebuild \
+            -workspace ios/Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Debug \
+            -sdk iphoneos \
+            ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM="" \
+            PROVISIONING_PROFILE="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            SYMROOT="$(pwd)/build/ios" \
+            2>&1 | tee flutter_build.log
+          BUILD_EXIT=${PIPESTATUS[0]}
+          echo "=== xcodebuild exit: $BUILD_EXIT ==="
+          if [ $BUILD_EXIT -ne 0 ]; then
+            echo "=== HATALAR ==="
+            grep "error:" flutter_build.log | grep -v "^note:" | head -30 || true
+            echo "=== SON 60 SATIR ==="
+            tail -60 flutter_build.log
+          fi
+          exit $BUILD_EXIT
 
-      - name: Runner.app bul ve IPA olustur
+      - name: IPA olustur (Sideloadly icin)
         script: |
-          echo "=== Tum Runner.app yollari ==="
-          find . -name "Runner.app" -type d 2>/dev/null | grep -v Intermediates | grep -v iphonesimulator
+          echo "=== Runner.app ara ==="
+          find . -name "Runner.app" -type d 2>/dev/null \
+            | grep -v Intermediates | grep -v iphonesimulator
 
-          # iphoneos build'ini sec
           APP=$(find . -name "Runner.app" -type d 2>/dev/null \
             | grep -v Intermediates \
             | grep -v iphonesimulator \
@@ -51,7 +69,6 @@ workflows:
 
           if [ -z "$APP" ]; then
             echo "HATA: Runner.app bulunamadi!"
-            find . -maxdepth 8 -name "*.app" -type d 2>/dev/null | head -20
             exit 1
           fi
 
@@ -59,14 +76,14 @@ workflows:
 
           if [ ! -f "$APP/Info.plist" ]; then
             echo "HATA: Info.plist yok - Xcode build tamamlanmamis"
-            ls -la "$APP/" 2>/dev/null || echo "(bos)"
+            ls -la "$APP/"
             exit 1
           fi
 
-          echo "Info.plist: VAR"
           APP_SIZE=$(du -sm "$APP" | cut -f1)
           echo "Boyut: ${APP_SIZE} MB"
-          ls "$APP/" | head -20
+          echo "Icerik:"
+          ls "$APP/"
 
           mkdir -p Payload
           cp -r "$APP" Payload/
@@ -74,7 +91,7 @@ workflows:
           rm -rf Payload
 
           IPA_SIZE=$(du -sh crossroads-unsigned.ipa | cut -f1)
-          echo "IPA olusturuldu: crossroads-unsigned.ipa ($IPA_SIZE)"
+          echo "BASARILI: crossroads-unsigned.ipa ($IPA_SIZE)"
 
     artifacts:
       - crossroads-unsigned.ipa
