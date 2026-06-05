@@ -1,0 +1,55 @@
+name: crossroads
+description: Konuma Dayalı Kapsül Dating Uygulaması
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Supabase (Auth + DB + Realtime)
+  supabase_flutter: ^2.5.6
+
+  # Harita (OpenStreetMap - ücretsiz)
+  flutter_map: ^6.1.0
+  latlong2: ^0.9.0
+
+  # Konum
+  geolocator: ^11.0.0
+  geocoding: ^3.0.0
+
+  # State Management
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+
+  # UI
+  google_fonts: ^6.2.1
+  cached_network_image: ^3.3.1
+  lottie: ^3.1.2
+  flutter_animate: ^4.5.0
+  shimmer: ^3.0.0
+
+  # Diğer
+  go_router: ^14.1.4
+  shared_preferences: ^2.2.3
+  intl: ^0.19.0
+  uuid: ^4.4.0
+  permission_handler: ^11.3.1
+  url_launcher: ^6.3.0
+  image_picker: ^1.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  riverpod_generator: ^2.4.3
+  build_runner: ^2.4.11
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/animations/

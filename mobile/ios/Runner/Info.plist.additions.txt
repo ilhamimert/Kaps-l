@@ -1,0 +1,22 @@
+<!-- Bu satırları ios/Runner/Info.plist dosyasına <dict> içine ekle -->
+
+<!-- Konum izinleri -->
+<key>NSLocationWhenInUseUsageDescription</key>
+<string>CrossRoads yakınındaki kapsülleri göstermek için konumuna ihtiyaç duyuyor.</string>
+<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+<string>CrossRoads arka planda yeni kapsülleri takip etmek için konumuna ihtiyaç duyuyor.</string>
+<key>NSLocationAlwaysUsageDescription</key>
+<string>CrossRoads arka planda yeni kapsülleri takip etmek için konumuna ihtiyaç duyuyor.</string>
+
+<!-- URL Scheme (Supabase OAuth callback için) -->
+<key>CFBundleURLTypes</key>
+<array>
+  <dict>
+    <key>CFBundleTypeRole</key>
+    <string>Editor</string>
+    <key>CFBundleURLSchemes</key>
+    <array>
+      <string>io.crossroads.app</string>
+    </array>
+  </dict>
+</array>
