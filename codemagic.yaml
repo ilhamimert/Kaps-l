@@ -11,6 +11,14 @@ workflows:
       cocoapods: default
 
     scripts:
+      - name: Flutter create (Xcode project olustur)
+        script: |
+          flutter create . \
+            --project-name crossroads \
+            --org io.crossroads \
+            --platforms ios \
+            --no-overwrite
+
       - name: Flutter pub get
         script: flutter pub get
 
@@ -24,5 +32,5 @@ workflows:
           flutter build ios --release --no-codesign
 
     artifacts:
-      - mobile/build/ios/iphoneos/Runner.app
+      - build/ios/iphoneos/Runner.app
       - /tmp/xcodebuild_logs/*.log
