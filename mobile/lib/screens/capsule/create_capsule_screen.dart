@@ -194,7 +194,7 @@ class _CreateCapsuleScreenState extends State<CreateCapsuleScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Kapalı mekan', fontWeight: FontWeight.w600),
+                        const Text('Kapalı mekan', style: TextStyle(fontWeight: FontWeight.w600)),
                         Text(
                           'Kafe, AVM, binadaysan aç — GPS hataları telafi edilir',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
