@@ -22,23 +22,9 @@ workflows:
       - name: Flutter pub get
         script: flutter pub get
 
-      - name: Pod install
+      - name: Flutter build iOS (imzasiz)
         script: |
-          cd ios
-          pod install
-
-      - name: Xcode build (imzasiz)
-        script: |
-          xcodebuild \
-            -workspace ios/Runner.xcworkspace \
-            -scheme Runner \
-            -configuration Release \
-            -sdk iphoneos \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            DEVELOPMENT_TEAM="" \
-            SYMROOT=$(pwd)/build/ios
+          flutter build ios --no-codesign --release
 
       - name: IPA olustur
         script: |
