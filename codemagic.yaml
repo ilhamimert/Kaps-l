@@ -37,11 +37,13 @@ workflows:
 
       - name: Flutter build iOS (imzasiz)
         script: |
-          flutter build ios --debug --no-codesign --verbose 2>&1 | tee /tmp/flutter_build.log
+          flutter build ios --debug --no-codesign 2>&1 | tee flutter_build.log
           BUILD_EXIT=${PIPESTATUS[0]}
-          echo "=== Son 60 satir ==="
-          tail -60 /tmp/flutter_build.log
-          echo "=== Flutter build exit kodu: $BUILD_EXIT ==="
+          echo "=== Flutter build exit: $BUILD_EXIT ==="
+          if [ $BUILD_EXIT -ne 0 ]; then
+            echo "=== TAM HATA LOGU ==="
+            cat flutter_build.log
+          fi
           exit $BUILD_EXIT
 
       - name: IPA olustur (Sideloadly icin)
@@ -67,4 +69,4 @@ workflows:
 
     artifacts:
       - crossroads-unsigned.ipa
-      - /tmp/flutter_build.log
+      - flutter_build.log
