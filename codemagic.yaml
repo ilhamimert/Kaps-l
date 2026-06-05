@@ -25,26 +25,31 @@ workflows:
             -e 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' \
             ios/Runner.xcodeproj/project.pbxproj
 
-      - name: Flutter pub get
-        script: flutter pub get
-
-      - name: Flutter build verbose (hata tespiti)
+      - name: Flutter pub get + analyze
         script: |
-          flutter build ios --debug --no-codesign --verbose \
-            2>&1 | tee /tmp/flutter_verbose.log || true
-          echo "=== kernel_snapshot / error satirlari ==="
-          grep -i "error\|exception\|failed\|kernel_snapshot" /tmp/flutter_verbose.log | head -60
+          flutter pub get
+          flutter analyze 2>&1 | tail -30
+
+      - name: Flutter build iOS (imzasiz)
+        script: |
+          flutter build ios --debug --no-codesign 2>&1 | tee /tmp/flutter_build.log
+          echo "Exit: $?"
 
       - name: IPA olustur (Sideloadly icin)
         script: |
-          APP=$(find build/ios/Debug-iphoneos -maxdepth 1 -name "Runner.app" -type d 2>/dev/null | head -1)
-          if [ -z "$APP" ] || [ ! -f "$APP/Info.plist" ]; then
+          # flutter build ios ciktisi: build/ios/iphoneos/Runner.app
+          APP=$(find build/ios -name "Runner.app" -type d \
+            -not -path "*/Intermediates*" \
+            -not -path "*/iphonesimulator*" \
+            -not -path "*/DerivedData*" | head -1)
+          if [ -z "$APP" ]; then
             echo "HATA: Runner.app bulunamadi"
-            echo "Mevcut klasorler:"
-            find build/ios -maxdepth 2 -type d 2>/dev/null || true
+            find build/ios -maxdepth 3 -type d 2>/dev/null | head -30
             exit 1
           fi
           echo "Bulunan: $APP"
+          echo "Icerik:"
+          ls "$APP/" | head -20
           mkdir -p Payload
           cp -r "$APP" Payload/
           zip -r crossroads-unsigned.ipa Payload/
@@ -53,4 +58,4 @@ workflows:
 
     artifacts:
       - crossroads-unsigned.ipa
-      - /tmp/flutter_verbose.log
+      - /tmp/flutter_build.log
