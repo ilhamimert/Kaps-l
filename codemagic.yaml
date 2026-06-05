@@ -18,16 +18,24 @@ workflows:
             --org io.crossroads \
             --platforms ios \
             --no-overwrite
-          # CocoaPods kalintisini temizle, Flutter SPM kullansin
+          # CocoaPods kalintisini temizle
           rm -f ios/Podfile ios/Podfile.lock
           rm -rf ios/Pods
+          # Xcode imzalama gereksinimini kaldır
+          sed -i '' \
+            -e 's/DEVELOPMENT_TEAM = [^;]*;/DEVELOPMENT_TEAM = "";/g' \
+            -e 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' \
+            ios/Runner.xcodeproj/project.pbxproj
 
       - name: Flutter pub get
         script: flutter pub get
 
       - name: Flutter build iOS (imzasiz)
         script: |
-          flutter build ios --no-codesign --release
+          flutter build ios \
+            --release \
+            --no-codesign \
+            --dart-define=FLUTTER_BUILD_MODE=release
 
       - name: IPA olustur
         script: |
